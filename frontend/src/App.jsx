@@ -21,8 +21,8 @@ const nav = [
 export default function App() {
   const [page, setPage] = useState("cashier");
   const [apiOnline, setApiOnline] = useState(null);
-  const brand = import.meta.env.VITE_BRAND_NAME || "YOUR BRAND";
-  const subtitle = import.meta.env.VITE_BRAND_SUBTITLE || "Digital Receipt Studio";
+  const brand = import.meta.env.VITE_BRAND_NAME || "U-MaMi";
+  const subtitle = import.meta.env.VITE_BRAND_SUBTITLE || "Kasir digital restoran";
 
   useEffect(() => {
     let active = true;
