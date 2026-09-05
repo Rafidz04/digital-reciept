@@ -6,6 +6,8 @@ import path from "path";
 import { fileURLToPath } from "url";
 import menuRoutes from "./routes/menuRoutes.js";
 import orderRoutes from "./routes/orderRoutes.js";
+import authRoutes from "./routes/authRoutes.js";
+import { ensureSuperAdmin } from "./utils/superAdmin.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -58,6 +60,7 @@ app.use(
 app.get("/api/health", (_req, res) =>
   res.json({ success: true, message: "Digital Receipt API OK" }),
 );
+app.use("/api/auth", authRoutes);
 app.use("/api/menus", menuRoutes);
 app.use("/api/orders", orderRoutes);
 
@@ -80,6 +83,7 @@ if (mongoose.connection.readyState === 0) {
   await mongoose.connect(mongoUrl);
   console.log("[DB] MongoDB connected");
 }
+await ensureSuperAdmin();
 
 if (!process.env.VERCEL) {
   const port = Number(process.env.PORT || 8080);

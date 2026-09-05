@@ -60,9 +60,12 @@ export async function downloadPdf(req, res, next) {
   try {
     const order = await Order.findById(req.params.id);
     if (!order) return res.status(404).json({ success: false, message: "Transaksi tidak ditemukan." });
-    const pdf = await buildReceiptPdf(order);
+    const paperWidthMm = req.query.paper === "58" ? 58 : 80;
+    const pdf = await buildReceiptPdf(order, { paperWidthMm });
+    const disposition = req.query.download === "1" ? "attachment" : "inline";
     res.setHeader("Content-Type", "application/pdf");
-    res.setHeader("Content-Disposition", `attachment; filename=Struk-${order.receiptNo}.pdf`);
+    res.setHeader("Cache-Control", "private, no-store");
+    res.setHeader("Content-Disposition", `${disposition}; filename=Struk-${order.receiptNo}-${paperWidthMm}mm.pdf`);
     res.send(pdf);
   } catch (e) { next(e); }
 }

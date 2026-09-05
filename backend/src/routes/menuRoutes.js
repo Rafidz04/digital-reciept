@@ -1,6 +1,7 @@
 import { Router } from "express";
 import multer from "multer";
 import { createMenu, getMenuImage, listMenus, toggleMenu, updateMenu } from "../controllers/menuController.js";
+import { requireAuth } from "../middleware/auth.js";
 
 const router = Router();
 const upload = multer({
@@ -12,8 +13,10 @@ const upload = multer({
   }
 });
 
-router.get("/", listMenus);
+// Gambar boleh dibaca tanpa token agar dapat langsung dipakai oleh elemen <img>.
 router.get("/:id/image", getMenuImage);
+router.use(requireAuth);
+router.get("/", listMenus);
 router.post("/", upload.single("image"), createMenu);
 router.put("/:id", upload.single("image"), updateMenu);
 router.patch("/:id/status", toggleMenu);

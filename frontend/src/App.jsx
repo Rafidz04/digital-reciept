@@ -1,13 +1,15 @@
 import { lazy, Suspense, useEffect, useState } from "react";
 import {
   BarChart3,
+  LogOut,
   Menu as MenuIcon,
   ReceiptText,
   Settings2,
 } from "lucide-react";
 import CashierPage from "./pages/CashierPage";
 import MenuAdminPage from "./pages/MenuAdminPage";
-import { api } from "./services/api";
+import LoginPage from "./pages/LoginPage";
+import { api, clearAuthToken, getAuthToken } from "./services/api";
 import "./styles.css";
 
 const DashboardPage = lazy(() => import("./pages/DashboardPage"));
@@ -21,8 +23,32 @@ const nav = [
 export default function App() {
   const [page, setPage] = useState("cashier");
   const [apiOnline, setApiOnline] = useState(null);
+  const [auth, setAuth] = useState({ checking: true, user: null });
   const brand = import.meta.env.VITE_BRAND_NAME || "YOUR BRAND";
   const subtitle = import.meta.env.VITE_BRAND_SUBTITLE || "Digital Receipt Studio";
+
+  useEffect(() => {
+    let active = true;
+    const requireLogin = () => {
+      if (active) setAuth({ checking: false, user: null });
+    };
+    const validateSession = async () => {
+      if (!getAuthToken()) return requireLogin();
+      try {
+        const { data } = await api.get("/auth/me");
+        if (active) setAuth({ checking: false, user: data.data.user });
+      } catch {
+        clearAuthToken();
+        requireLogin();
+      }
+    };
+    window.addEventListener("umami:auth-required", requireLogin);
+    validateSession();
+    return () => {
+      active = false;
+      window.removeEventListener("umami:auth-required", requireLogin);
+    };
+  }, []);
 
   useEffect(() => {
     let active = true;
@@ -39,6 +65,18 @@ export default function App() {
     return () => { active = false; clearInterval(timer); };
   }, []);
 
+  const logout = () => {
+    clearAuthToken();
+    setPage("cashier");
+    setAuth({ checking: false, user: null });
+  };
+
+  if (auth.checking) {
+    return <div className="auth-loading"><span className="brand-logo-frame"><img src="/logo.png" alt="Logo U-MaMi" /></span><b>Menyiapkan ruang kasir...</b></div>;
+  }
+
+  if (!auth.user) return <LoginPage onLogin={(user) => setAuth({ checking: false, user })} />;
+
   return (
     <div className="app-shell">
       <header className="topbar">
@@ -49,9 +87,13 @@ export default function App() {
             <span>{subtitle}</span>
           </div>
         </div>
-        <div className="topbar-right">
-          <span className={`online-dot ${apiOnline === false ? "offline" : apiOnline === null ? "checking" : ""}`}></span>
-          <span>{apiOnline === false ? "Server terputus" : apiOnline === null ? "Mengecek server" : "Siap melayani"}</span>
+        <div className="topbar-actions">
+          <div className="topbar-right">
+            <span className={`online-dot ${apiOnline === false ? "offline" : apiOnline === null ? "checking" : ""}`}></span>
+            <span>{apiOnline === false ? "Server terputus" : apiOnline === null ? "Mengecek server" : "Siap melayani"}</span>
+          </div>
+          <div className="admin-chip"><span>Superadmin</span><b>{auth.user.username}</b></div>
+          <button type="button" className="logout-btn" onClick={logout} aria-label="Keluar dari aplikasi"><LogOut size={18} /><span>Keluar</span></button>
         </div>
       </header>
       <div className="app-body">

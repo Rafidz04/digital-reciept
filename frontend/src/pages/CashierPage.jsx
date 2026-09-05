@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { CircleAlert, Download, Minus, Plus, Search, Send, ShoppingBag, Trash2 } from "lucide-react";
-import { api, API_URL, apiErrorMessage, imageUrl, rupiah } from "../services/api";
+import { CircleAlert, Download, Minus, Plus, Printer, Search, Send, ShoppingBag, Trash2 } from "lucide-react";
+import { api, apiErrorMessage, imageUrl, rupiah } from "../services/api";
 import ReceiptPreview from "../components/ReceiptPreview";
 import Modal from "../components/Modal";
+import { printThermalReceipt } from "../utils/thermalPrint";
 
 export default function CashierPage() {
   const [menus, setMenus] = useState([]);
@@ -18,6 +19,7 @@ export default function CashierPage() {
   const [fallbackLinks, setFallbackLinks] = useState(null);
   const [customerAlertOpen, setCustomerAlertOpen] = useState(false);
   const [customerNeedsAttention, setCustomerNeedsAttention] = useState(false);
+  const [paperWidth, setPaperWidth] = useState(() => Number(localStorage.getItem("umami:paper-width")) === 58 ? 58 : 80);
   const customerInputRef = useRef(null);
 
   const loadMenus = async () => {
@@ -78,7 +80,46 @@ export default function CashierPage() {
     finally { setLoading(false); }
   };
 
-  const downloadPdf = () => { if (order) window.open(`${API_URL}/api/orders/${order._id}/pdf`, "_blank"); };
+  const choosePaperWidth = (width) => {
+    setPaperWidth(width);
+    localStorage.setItem("umami:paper-width", String(width));
+  };
+
+  const pdfBlobUrl = async () => {
+    const { data } = await api.get(`/orders/${order._id}/pdf?paper=${paperWidth}&download=1`, {
+      responseType: "blob",
+      timeout: 30000,
+    });
+    return URL.createObjectURL(data);
+  };
+
+  const triggerPdfDownload = (url) => {
+    const download = document.createElement("a");
+    download.href = url;
+    download.download = `Struk-${order.receiptNo}-${paperWidth}mm.pdf`;
+    document.body.appendChild(download);
+    download.click();
+    download.remove();
+  };
+
+  const downloadPdf = async () => {
+    if (!order) return;
+    try {
+      setLoading(true); setMessage("");
+      const url = await pdfBlobUrl();
+      triggerPdfDownload(url);
+      window.setTimeout(() => URL.revokeObjectURL(url), 60000);
+    } catch (error) {
+      setMessage(apiErrorMessage(error, "PDF gagal di-download."));
+    } finally { setLoading(false); }
+  };
+
+  const printThermal = () => {
+    if (!order) return;
+    if (!printThermalReceipt(order, paperWidth)) {
+      setMessage("Jendela print diblokir browser. Izinkan pop-up untuk situs ini lalu coba lagi.");
+    }
+  };
   const sendWa = async () => {
     if (!order) return;
     const whatsappTab = window.open("about:blank", "digital-receipt-whatsapp");
@@ -90,16 +131,16 @@ export default function CashierPage() {
     } catch (e) {
       const payload = e.response?.data;
       if (payload?.code === "WA_NOT_CONFIGURED") {
-        const pdfUrl = `${API_URL}${payload.pdfUrl}`;
-        const download = document.createElement("a");
-        download.href = pdfUrl;
-        download.download = `Struk-${order.receiptNo}.pdf`;
-        document.body.appendChild(download);
-        download.click();
-        download.remove();
-        if (whatsappTab) whatsappTab.location.href = payload.whatsappUrl;
-        setFallbackLinks({ pdfUrl, whatsappUrl: payload.whatsappUrl });
-        setMessage("Mode kirim manual aktif: PDF sudah diunduh dan chat WhatsApp tujuan sudah dibuka. Lampirkan PDF tersebut lalu tekan kirim.");
+        try {
+          const pdfUrl = await pdfBlobUrl();
+          triggerPdfDownload(pdfUrl);
+          if (whatsappTab) whatsappTab.location.href = payload.whatsappUrl;
+          setFallbackLinks({ pdfUrl, whatsappUrl: payload.whatsappUrl });
+          setMessage("Mode kirim manual aktif: PDF sudah diunduh dan chat WhatsApp tujuan sudah dibuka. Lampirkan PDF tersebut lalu tekan kirim.");
+        } catch (downloadError) {
+          whatsappTab?.close();
+          setMessage(apiErrorMessage(downloadError, "PDF struk gagal disiapkan."));
+        }
       } else {
         whatsappTab?.close();
         setMessage(apiErrorMessage(e, "Struk gagal dikirim ke WhatsApp."));
@@ -158,7 +199,12 @@ export default function CashierPage() {
       <div className="preview-wrap"><ReceiptPreview order={order} customerName={customerName} cart={cart}/></div>
       {notice}
       {order ? <div className="modal-actions">
-        <button className="btn secondary" onClick={downloadPdf}><Download size={17}/> Download PDF</button>
+        <div className="thermal-tool">
+          <div><span><Printer size={17}/> Printer thermal</span><small>Pilih lebar kertas printer Kassen Anda.</small></div>
+          <div className="paper-size-control"><button type="button" className={paperWidth===58?"active":""} onClick={()=>choosePaperWidth(58)}>58 mm</button><button type="button" className={paperWidth===80?"active":""} onClick={()=>choosePaperWidth(80)}>80 mm</button></div>
+          <button type="button" className="btn thermal-print-btn" onClick={printThermal}><Printer size={17}/> Print Thermal {paperWidth} mm</button>
+        </div>
+        <button className="btn secondary" disabled={loading} onClick={downloadPdf}><Download size={17}/> Download PDF {paperWidth} mm</button>
         <button className="btn primary" disabled={loading} onClick={sendWa}><Send size={17}/> Send WhatsApp</button>
         <button className="btn ghost" onClick={newTransaction}>Transaksi Baru</button>
       </div> : <div className="modal-actions"><button className="btn primary" onClick={createReceipt}>Konfirmasi & Buat Struk</button></div>}
