@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Eye, EyeOff, LockKeyhole, LogIn, ShieldCheck, UserRound } from "lucide-react";
+import { Eye, EyeOff, LockKeyhole, LogIn, UserRound } from "lucide-react";
 import { api, apiErrorMessage, storeAuthToken } from "../services/api";
 
 export default function LoginPage({ onLogin }) {
@@ -36,7 +36,6 @@ export default function LoginPage({ onLogin }) {
           <span className="login-eyebrow">Digital Receipt Studio</span>
           <h1>Kasir yang ringkas,<br />struk yang berkesan.</h1>
           <p>Kelola menu, transaksi, laporan, dan struk thermal U-MaMi dalam satu tempat.</p>
-          <div className="login-security-note"><ShieldCheck size={18} /><span>Akses khusus superadmin</span></div>
         </div>
       </section>
 
