@@ -172,6 +172,8 @@ img { display: block; }
   margin: 0 auto;
 }
 
+.menu-panel, .cart-panel { min-width: 0; }
+
 .section-title-row {
   display: flex;
   align-items: flex-end;
@@ -586,7 +588,7 @@ td { padding: 11px 10px; border-bottom: 1px solid #f1e7da; color: #5f4d43; }
   .sidebar { padding: 24px 10px; }
   .sidebar-title span, .sidebar button span { display: none; }
   .sidebar-title, .sidebar button { justify-content: center; }
-  .cashier-layout { grid-template-columns: 1fr; }
+  .cashier-layout { grid-template-columns: minmax(0, 1fr); }
   .cart-panel { position: static; }
   .menu-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
   .dashboard-grid { grid-template-columns: 1fr; }
