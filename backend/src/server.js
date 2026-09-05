@@ -75,9 +75,15 @@ app.use((err, _req, res, _next) => {
   });
 });
 
-const port = Number(process.env.PORT || 8080);
-await mongoose.connect(
-  process.env.MONGO_URL || "mongodb://127.0.0.1:27017/digital_receipt",
-);
-console.log("[DB] MongoDB connected");
-app.listen(port, () => console.log(`[API] http://localhost:${port}`));
+const mongoUrl = process.env.MONGO_URL || "mongodb://127.0.0.1:27017/digital_receipt";
+if (mongoose.connection.readyState === 0) {
+  await mongoose.connect(mongoUrl);
+  console.log("[DB] MongoDB connected");
+}
+
+if (!process.env.VERCEL) {
+  const port = Number(process.env.PORT || 8080);
+  app.listen(port, () => console.log(`[API] http://localhost:${port}`));
+}
+
+export default app;

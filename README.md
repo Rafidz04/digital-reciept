@@ -38,3 +38,15 @@ Frontend berjalan di `http://localhost:5173`.
 `WA_ACCESS_TOKEN` bukan URL `wa.me`. Nilai tersebut adalah access token dari Meta WhatsApp Business Cloud API. Jika token belum diisi, aplikasi memakai mode manual: PDF diunduh dan chat WhatsApp tujuan dibuka agar PDF dapat dilampirkan.
 
 Jangan commit file `.env` karena dapat berisi token dan kredensial pribadi.
+
+## Deployment
+
+Deployment prototipe saat ini menggunakan dua project Vercel dari repository yang sama:
+
+- Frontend: `https://umami-digital-receipt.vercel.app`
+- Backend API: `https://umami-digital-receipt-api.vercel.app`
+- Database: MongoDB Atlas M0
+
+Project frontend menggunakan root directory `frontend`, sedangkan project API menggunakan `backend`. Keduanya terhubung ke branch `main` untuk auto-deploy.
+
+> Vercel Hobby ditujukan untuk penggunaan personal/nonkomersial. Gunakan paket hosting komersial saat aplikasi mulai dipakai untuk operasional bisnis nyata.

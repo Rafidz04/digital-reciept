@@ -17,13 +17,21 @@ export async function createMenu(req, res, next) {
     if (price === undefined || price === "" || !Number.isFinite(numericPrice) || numericPrice < 0) {
       return res.status(400).json({ success: false, message: "Harga tidak valid." });
     }
-    const menu = await Menu.create({
+    const menu = new Menu({
       name: name.trim(),
       price: numericPrice,
-      image: req.file ? `/uploads/${req.file.filename}` : null,
       softDelete: false
     });
-    res.status(201).json({ success: true, data: menu });
+    if (req.file) {
+      menu.image = `/api/menus/${menu._id}/image`;
+      menu.imageData = req.file.buffer;
+      menu.imageMimeType = req.file.mimetype;
+    }
+    await menu.save();
+    const responseMenu = menu.toObject();
+    delete responseMenu.imageData;
+    delete responseMenu.imageMimeType;
+    res.status(201).json({ success: true, data: responseMenu });
   } catch (e) { next(e); }
 }
 
@@ -41,11 +49,25 @@ export async function updateMenu(req, res, next) {
       }
       payload.price = numericPrice;
     }
-    if (req.file) payload.image = `/uploads/${req.file.filename}`;
+    if (req.file) {
+      payload.image = `/api/menus/${req.params.id}/image?v=${Date.now()}`;
+      payload.imageData = req.file.buffer;
+      payload.imageMimeType = req.file.mimetype;
+    }
 
     const menu = await Menu.findByIdAndUpdate(req.params.id, payload, { new: true, runValidators: true });
     if (!menu) return res.status(404).json({ success: false, message: "Menu tidak ditemukan." });
     res.json({ success: true, data: menu });
+  } catch (e) { next(e); }
+}
+
+export async function getMenuImage(req, res, next) {
+  try {
+    const menu = await Menu.findById(req.params.id).select("+imageData +imageMimeType");
+    if (!menu?.imageData) return res.status(404).json({ success: false, message: "Gambar menu tidak ditemukan." });
+    res.setHeader("Content-Type", menu.imageMimeType || "image/jpeg");
+    res.setHeader("Cache-Control", "public, max-age=31536000, immutable");
+    res.send(menu.imageData);
   } catch (e) { next(e); }
 }
 
